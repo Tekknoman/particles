@@ -1,10 +1,17 @@
 var doBlur = true;
-var slowSound, fastSound, turnSound;
+var slowSound, fastSound, turnSound, collectSound;
+var items = [];
+var itemSize = 20;
+var fastSoundVolume = 0;
 
 function toggleBlur() {
   doBlur = !doBlur;
   document.getElementById("blurToggle").value = doBlur;
   document.getElementsByTagName("canvas")[0].classList.toggle("blur");
+}
+
+function updateItemCounter() {
+  document.getElementById("itemCounter").innerHTML = "Items collected: " + collectedItems;
 }
 
 function Particle(lifespan = random(100, 300), x = random(width), y = random(height), vel = p5.Vector.random2D()) {
@@ -37,8 +44,8 @@ Particle.prototype.update = function () {
 };
 
 Particle.prototype.show = function () {
-  stroke(255, 255 * (1 / this.totalLifespan * this.lifespan), 120);
-  fill(255, 255 * (1 / this.totalLifespan * this.lifespan), 120);
+  stroke(255, 255 * (1 / this.totalLifespan * this.lifespan), 120, (200 / this.totalLifespan * this.lifespan));
+  fill(255, 255 * (1 / this.totalLifespan * this.lifespan), 120, (200 / this.totalLifespan * this.lifespan));
   ellipse(this.pos.x, this.pos.y, this.r, this.r);
 };
 
@@ -51,12 +58,15 @@ var oldMouseX = 0;
 var oldMouseY = 0;
 var rotation = 0;
 var targetRotation = 0;
-var rotationSpeed = 0.25;
+var rotationSpeed = 0.23;
+var itemCount = 5;
+var collectedItems = 0;
 
 function preload() {
   rocket = loadImage("assets/rocket.png");
   slowSound = loadSound("assets/slow.mp3");
   fastSound = loadSound("assets/fast.mp3");
+  collectSound = loadSound("assets/collect.mp3");
 }
 
 function setup() {
@@ -67,6 +77,11 @@ function setup() {
   angleMode(DEGREES);
   slowSound.loop();
   fastSound.loop();
+
+  // Generate random items
+  for (var i = 0; i < itemCount; i++) {
+    items.push(createVector(random(width), random(height)));
+  }
 }
 
 function draw() {
@@ -96,9 +111,33 @@ function draw() {
 
   rotation += (targetRotation - rotation) * rotationSpeed;
 
-  // Adjust sounds based on speed and turns
+  // Adjust sounds based on speed and sharp turns
   slowSound.setVolume(map(speed, 0, 20, 1, 0));
-  fastSound.setVolume(map(speed, 0, 20, 0, 1));
+
+  // Smoothly transition the fast sound volume
+  var targetFastSoundVolume = map(speed, 0, 20, 0, 1);
+  fastSoundVolume = lerp(fastSoundVolume, targetFastSoundVolume, 0.05);
+  fastSound.setVolume(fastSoundVolume);
+
+  if (int(random(1000)) % 155 === 0 && items.length < itemCount) {
+    items.push(createVector(random(width), random(height)));
+  }
+
+  items = items.filter(function (item) {
+    if (dist(mouseX, mouseY, item.x, item.y) < itemSize * 2) {
+      collectSound.play();
+      collectedItems++;
+      return false;
+    }
+    return dist(mouseX, mouseY, item.x, item.y) > itemSize * 2;
+  });
+
+  // Draw and check for item collection
+  for (var j = items.length - 1; j >= 0; j--) {
+    var item = items[j];
+    fill(255, 204, 0);
+    ellipse(item.x, item.y, itemSize, itemSize);
+  }
 
   push();
   translate(mouseX, mouseY);
@@ -109,4 +148,5 @@ function draw() {
 
   oldMouseX = mouseX;
   oldMouseY = mouseY;
+  updateItemCounter();
 }
