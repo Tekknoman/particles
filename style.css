@@ -1,0 +1,15 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+}
+
+canvas.blur {
+    filter: blur(30px);
+}
